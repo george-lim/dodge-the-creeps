@@ -1,0 +1,39 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - id: build
+        uses: manleydev/build-godot-action@v1.5.0
+        with:
+          name: index.html
+          preset: Web
+      - name: Enable cross-origin isolation through a service worker
+        env:
+          BUILD_PATH: ${{ steps.build.outputs.build }}
+        run: |
+          sudo cp coi-serviceworker.min.js $BUILD_PATH
+          sudo sed -i 's|</head>|<script src="coi-serviceworker.min.js"></script></head>|' ${BUILD_PATH}index.html
+      - uses: actions/upload-pages-artifact@v2
+        with:
+          path: ${{ steps.build.outputs.build }}
+  deploy:
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v2
